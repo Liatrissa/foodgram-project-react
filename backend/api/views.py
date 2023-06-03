@@ -73,9 +73,6 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ('username', 'email')
     permission_classes = (AllowAny,)
 
-    def get_queryset(self):
-        return User.objects.all()
-
     @action(
         detail=False, methods=('get', 'patch', 'post',),
         url_path='me', url_name='me',
