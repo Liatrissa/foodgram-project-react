@@ -2,7 +2,7 @@ FROM python:3.8-slim
 
 WORKDIR /app
 
-COPY requirements.txt /app
+COPY backend/requirements.txt /app
 
 RUN python -m pip install --upgrade pip
 
