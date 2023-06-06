@@ -1,6 +1,5 @@
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import Exists, OuterRef, Sum
-from django_filters import OrderingFilter
+from django.db.models import Exists, OuterRef, Sum, Value
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import permissions, status, viewsets
@@ -158,14 +157,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     Вьюсет для работы с рецептами. В представлении используются
     два отдельных серилизатора для чтения и записи объектов модели.
     """
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
     permission_classes = (AuthorOrReadOnly,)
     pagination_class = RecipePagination
-    filter_backends = (
-        DjangoFilterBackend,
-        OrderingFilter,
-    )
     filterset_class = RecipeFilter
 
     def get_queryset(self):
@@ -175,18 +168,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         Добавление поля is_in_shopping_cart для определения добавления рецепта
         в список покупок.
         """
-        user = self.request.user
         return Recipe.objects.annotate(
             is_favorited=Exists(
-                FavoriteRecipeUser.objects.filter(recipe=OuterRef('pk'),
-                                                  user=user.pk),
-            ),
+                self.request.user.favorites.filter(recipe=OuterRef("pk"))
+            )
+            if self.request.user.is_authenticated
+            else Value(False),
             is_in_shopping_cart=Exists(
-                ShoppingCartUser.objects.filter(
-                    recipe=OuterRef('pk'),
-                    user=user.pk,
-                ),
-            ),
+                self.request.user.shopping_list.filter(recipe=OuterRef("pk"))
+            )
+            if self.request.user.is_authenticated
+            else Value(False),
         )
 
     def get_serializer_class(self):
@@ -194,12 +186,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         Изменение типа вызываемого сериализатора, в зависимости от метода
         запроса.
         """
-        if self.request.method == 'GET':
+        if self.request.method in ("POST", "PUT", "PATCH"):
             return RecipeSerializer
         return RecipePostSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
 
     def get_permissions(self):
         """

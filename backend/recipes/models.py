@@ -71,6 +71,7 @@ class Recipe(models.Model):
     name = models.CharField(
         max_length=settings.HEX_CODE_MAX_LENGTH,
         verbose_name='Название блюда',
+        db_index=True,
         help_text='Введите название блюда',
     )
     text = models.TextField(help_text='Введите текст рецепта',
@@ -100,7 +101,6 @@ class Recipe(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        db_index=True,
         verbose_name='Дата публикации рецепта',
         help_text="Введите дату публикации поста",
     )
@@ -108,16 +108,10 @@ class Recipe(models.Model):
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
-        ordering = ('-pub_date',)
-        constraints = [
-            models.UniqueConstraint(
-                fields=['name', 'author'], name='unique_name_author_recip'
-            )
-        ]
+        ordering = ("-id",)
 
     def __str__(self):
-        return (f'Рецепт: {self.name}, Описание: {self.text[:100]},'
-                f'Время приготовления: {self.cooking_time} мин.')
+        return f'{self.name}'
 
 
 class RecipeIngredient(models.Model):
