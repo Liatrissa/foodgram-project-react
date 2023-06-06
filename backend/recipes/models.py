@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Exists, OuterRef
 
 from users.models import User
 
@@ -67,30 +66,6 @@ class Ingredient(models.Model):
         return f'{self.name}, {self.measurement_unit}.'
 
 
-class RecipeQuerySet(models.QuerySet):
-    def filter_by_tags(self, tags):
-        if tags:
-            return self.filter(tags__slug__in=tags).distinct()
-        return self
-
-    def add_user_annotations(self, user_id):
-        return self.annotate(
-            is_favorited=Exists(
-                FavoriteRecipeUser.objects.filter(
-                    user_id=user_id, recipe__pk=OuterRef('pk')
-                )
-            ),
-            is_in_shopping_cart=Exists(
-                ShoppingCartUser.objects.filter(
-                    user_id=user_id, recipe__pk=OuterRef('pk'))
-            ),
-            in_shopping_cart=Exists(
-                ShoppingCartUser.objects.filter(
-                    user_id=user_id, recipe__pk=OuterRef('pk'))
-            )
-        )
-
-
 class Recipe(models.Model):
     """Модель рецепта"""
     name = models.CharField(
@@ -129,7 +104,6 @@ class Recipe(models.Model):
         verbose_name='Дата публикации рецепта',
         help_text="Введите дату публикации поста",
     )
-    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Рецепт'
