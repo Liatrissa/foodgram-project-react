@@ -4,7 +4,8 @@ from django.db import transaction
 from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import exceptions, relations, serializers, status
+from rest_framework import exceptions, serializers, status
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from recipes.models import (
     FavoriteRecipeUser,
@@ -167,17 +168,15 @@ class RecipeSerializer(serializers.ModelSerializer):
     рецептов.
     """
     author = CustomUserSerializer(read_only=True)
-    image = Base64ImageField()
+    image = Base64ImageField(max_length=None)
     ingredients = IngredientRecipeSerializer(
-        read_only=True,
         many=True,
         source='ingredient_list'
     )
     tags = TagSerializer(read_only=True, many=True)
-    is_favorited = serializers.BooleanField(default=False,
-                                            read_only=True)
-    is_in_shopping_cart = serializers.BooleanField(default=False,
-                                                   read_only=True)
+    is_favorited = serializers.SerializerMethodField(read_only=True)
+    is_in_shopping_cart = serializers.SerializerMethodField(
+        read_only=True)
 
     class Meta:
         model = Recipe
@@ -186,6 +185,21 @@ class RecipeSerializer(serializers.ModelSerializer):
             'is_favorited', 'is_in_shopping_cart', 'name',
             'image', 'text', 'cooking_time',
         )
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        return (request
+                and request.user.is_authenticated
+                and obj.favorite.filter(user=request.user).exists())
+
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if request.user.is_anonymous:
+            return False
+        return ShoppingCartUser.objects.filter(
+            user=request.user,
+            recipe__id=obj.id,
+        ).exists()
 
 
 class IngredientAmountSerializer(serializers.ModelSerializer):
@@ -208,8 +222,10 @@ class RecipePostSerializer(serializers.ModelSerializer):
     объектов этих моделей.
     """
     author = CustomUserSerializer(read_only=True)
-    tags = relations.PrimaryKeyRelatedField(
-        queryset=Tag.objects.all(), many=True
+    tags = PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+        allow_empty=False
     )
     ingredients = IngredientAmountSerializer(many=True)
     image = Base64ImageField(max_length=None)
@@ -217,6 +233,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
+            "id",
             'tags',
             'author',
             'ingredients',
