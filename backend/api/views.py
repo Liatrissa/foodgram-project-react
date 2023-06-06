@@ -123,7 +123,7 @@ class CustomUserViewSet(UserViewSet):
     @action(
         methods=['POST', 'DELETE'],
         detail=True,
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsAuthenticated]
     )
     def subscribe(self, request, **kwargs):
         """

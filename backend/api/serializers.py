@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer, UserCreateSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import exceptions, serializers
 
@@ -58,6 +58,14 @@ class CustomUserSerializer(UserSerializer):
         user = self.context.get('request').user
         return (user.is_authenticated
                 and obj.following.filter(user=user).exists())
+
+
+class CustomUserCreateSerializer(UserCreateSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'id', 'first_name', 'last_name',
+            'email', 'username', 'password')
 
 
 class RecipeInfoSerializer(serializers.ModelSerializer):
