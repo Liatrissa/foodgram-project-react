@@ -28,6 +28,11 @@ class Tag(models.Model):
         ordering = ("id",)
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'color'], name='unique_name_color'
+            )
+        ]
 
     def __str__(self) -> str:
         return (f'{self.name}'
@@ -50,6 +55,12 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_name_measurement_unit'
+            )
+        ]
 
     def __str__(self):
         return f'{self.name}, {self.measurement_unit}.'
