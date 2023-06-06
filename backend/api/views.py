@@ -1,6 +1,7 @@
 from django.contrib.auth.hashers import check_password, make_password
 from django.db.models import Sum, Value
 from django_filters.rest_framework import DjangoFilterBackend
+from djoser.views import UserViewSet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.fields import BooleanField
@@ -60,7 +61,7 @@ class IngredientsViewSet(PermissionMixin, viewsets.ModelViewSet):
     filterset_class = IngredientFilter
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class CustomUserViewSet(UserViewSet):
     """
     Набор представлений для работы с пользователями.
     """
