@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import exceptions, serializers
 
