@@ -1,12 +1,12 @@
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import Exists, OuterRef, Sum, Value
+from django.db.models import Sum, Value
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.fields import BooleanField
 from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import (
-    AllowAny,
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
 )
@@ -66,27 +66,16 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
-    filter_backends = (
-        DjangoFilterBackend,
-        SearchFilter,
-    )
-    search_fields = ('username', 'email')
-    permission_classes = (AllowAny,)
+    http_method_names = ['get', 'post', 'delete']
 
     @action(
-        detail=False, methods=('get', 'patch', 'post',),
-        url_path='me', url_name='me',
+        detail=False, methods=(['get']),
         permission_classes=[permissions.IsAuthenticated]
     )
     def get_user_me(self, request):
         """Метод обрабатывающий эндпоинт me."""
-        serializer = self.get_serializer(
-            request.user,
-            data=request.data,
-            partial=True
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer = CustomUserSerializer(request.user,
+                                          context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False,
@@ -112,7 +101,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(
         methods=['GET'],
         detail=False,
-        permission_classes=(IsAuthenticated,)
+        permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
         """
@@ -121,8 +110,8 @@ class UserViewSet(viewsets.ModelViewSet):
         В выдачу добавляются рецепты.
         """
         user = request.user
-        queryset = User.objects.filter(following__user=user)
-        pages = self.paginate_queryset(queryset)
+        subscriptions = Follow.objects.filter(user=user)
+        pages = self.paginate_queryset(subscriptions)
         serializer = FollowSerializer(
             pages,
             many=True,
@@ -135,24 +124,32 @@ class UserViewSet(viewsets.ModelViewSet):
         detail=True,
         permission_classes=[IsAuthenticated],
     )
-    def subscribe(self, request, pk):
+    def subscribe(self, request, **kwargs):
         """
         Эндпоинт для добавления / удаления подписки на пользователя.
         Доступно только авторизованным пользователям.
         """
-        following = get_object_or_404(User, id=pk)
-        user = request.user
-        if request.method == 'POST':
-            serializer = FollowSerializer(
-                following,
-                data=request.data,
-                context={'request': request},
-            )
-            serializer.is_valid(raise_exception=True)
-            Follow.objects.create(user=user, following=following)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        get_object_or_404(Follow, user=user, following=following).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if self.request.method == 'POST':
+            user = get_object_or_404(User, pk=kwargs.get('id'))
+            context = {'request': self.request, 'user': user}
+            serializer = FollowSerializer(data=request.data,
+                                          context=context)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(user=request.user, author=user)
+                return Response(data=serializer.data,
+                                status=status.HTTP_201_CREATED)
+            if self.request.method == 'DELETE':
+                user = request.user
+                author = get_object_or_404(User, pk=kwargs.get('id'))
+                if not Follow.objects.filter(user=user,
+                                             author=author).exists():
+                    return Response(
+                        {'error': 'Вы не подписаны на данного пользователя'},
+                        status=status.HTTP_400_BAD_REQUEST)
+                follow = get_object_or_404(Follow, user=user, author=author)
+                follow.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -160,36 +157,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
     Вьюсет для работы с рецептами. В представлении используются
     два отдельных серилизатора для чтения и записи объектов модели.
     """
-    permission_classes = (AuthorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    permission_classes = [AuthorOrReadOnly]
     pagination_class = RecipePagination
     filterset_class = RecipeFilter
+    filter_backends = (DjangoFilterBackend,)
 
     def get_queryset(self):
-        """
-        Добавление поля is_favorited для определения добавления рецепта
-        в избранное.
-        Добавление поля is_in_shopping_cart для определения добавления рецепта
-        в список покупок.
-        """
-        return Recipe.objects.annotate(
-            is_favorited=Exists(
-                self.request.user.favorites.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-            is_in_shopping_cart=Exists(
-                self.request.user.shopping_list.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-        )
+        if self.request.user.is_authenticated:
+            return Recipe.objects.add_user_annotations(self.request.user.id)
+        return Recipe.objects.add_user_annotations(
+            Value(None, output_field=BooleanField()))
 
     def get_serializer_class(self):
         """
         Изменение типа вызываемого сериализатора, в зависимости от метода
         запроса.
         """
-        if self.request.method in ("POST", "PUT", "PATCH"):
+        if self.action in ['create', 'partial_update']:
             return RecipeSerializer
         return RecipePostSerializer
 
