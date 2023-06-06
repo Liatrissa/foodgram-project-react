@@ -24,7 +24,6 @@ from recipes.models import (
 from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
-from .pagination import RecipePagination
 from .permissions import AuthorOrReadOnly
 from .serializers import (
     CustomUserSerializer,
