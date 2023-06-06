@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
-from django.db import IntegrityError
+from django.db import transaction
 from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -274,37 +274,40 @@ class RecipePostSerializer(serializers.ModelSerializer):
                 amount=ingredient['amount'],
                 recipe=recipe, )
 
-    @atomic
+    @transaction.atomic
     def create(self, validated_data):
         """
-        Переопределение метода записи рецепта с дополнительной проверкой
-        на наличие уникальной записи
+        Переопределение метода записи рецепта
         """
-        try:
-            ingredients = validated_data.pop('ingredients')
-            tags = validated_data.pop('tags')
-            author = self.context.get('request').user
-            recipe = Recipe.objects.create(author=author, **validated_data)
-            recipe.save()
-            recipe.tags.set(tags)
-            self.add_ingredients(ingredients, recipe)
-            return recipe
-        except IntegrityError:
-            error_message = (
-                "Название рецепта с данным именем у Вас уже существует!"
-            )
-            raise serializers.ValidationError({"error": error_message})
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.tags.add(*tags)
+        self.add_ingredients(ingredients, recipe)
+        for ingredient in ingredients:
+            RecipeIngredient.objects.create(
+                ingredient=ingredient.get('id'),
+                recipe=recipe,
+                amount=ingredient.get('amount'))
+        return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         """Переопределение метода обновления записи рецепта."""
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        instance.tags.set(tags)
         instance.tags.clear()
-        instance.ingredients.clear()
-        instance = super().update(instance, validated_data)
-        self.add_ingredients(recipe=instance, ingredients=ingredients)
-        return super().update(instance, validated_data)
+        instance.ingredients.add(*tags)
+        RecipeIngredient.objects.filter(recipe=instance).delete()
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        for ingredient in ingredients:
+            RecipeIngredient.objects.create(
+                ingredient=ingredient.get('id'),
+                recipe=instance,
+                amount=ingredient.get('amount'))
+        instance.save()
+        return instance
 
     def to_representation(self, instance):
         """
