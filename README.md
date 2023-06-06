@@ -1,6 +1,7 @@
 # Сайт "Продуктовый помощник"
 Проект Foodgram продуктовый помощник - платформа для публикации рецептов.
 
+![workflow](https://github.com/liatrissa/foodgram-project-react/actions/workflows/main.yml/badge.svg)
 
 ## Адрес развернутого приложения:
 
