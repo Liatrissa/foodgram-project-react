@@ -96,7 +96,6 @@ class Recipe(models.Model):
     name = models.CharField(
         max_length=settings.HEX_CODE_MAX_LENGTH,
         verbose_name='Название блюда',
-        db_index=True,
         help_text='Введите название блюда',
     )
     text = models.TextField(help_text='Введите текст рецепта',
@@ -126,6 +125,7 @@ class Recipe(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
+        db_index=True,
         verbose_name='Дата публикации рецепта',
         help_text="Введите дату публикации поста",
     )

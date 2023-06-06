@@ -160,7 +160,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
     http_method_names = ['get', 'post', 'patch', 'delete']
     permission_classes = [AuthorOrReadOnly]
-    pagination_class = RecipePagination
     filterset_class = RecipeFilter
     filter_backends = (DjangoFilterBackend,)
 
@@ -176,8 +175,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         запроса.
         """
         if self.action in ['create', 'partial_update']:
-            return RecipeSerializer
-        return RecipePostSerializer
+            return RecipePostSerializer
+        return RecipeSerializer
 
     def get_permissions(self):
         """
