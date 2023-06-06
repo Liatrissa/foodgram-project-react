@@ -1,7 +1,5 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
-from django.db import transaction
-from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import exceptions, serializers, status
@@ -282,58 +280,48 @@ class RecipePostSerializer(serializers.ModelSerializer):
             tags_list.append(tag)
         return data
 
-    @atomic
-    def add_ingredients(self, ingredients, recipe):
-        """Запись ингредиентов и их количества в рецепт."""
-        for ingredient in ingredients:
-            RecipeIngredient.objects.get_or_create(
-                ingredient=ingredient['id'],
-                amount=ingredient['amount'],
-                recipe=recipe, )
+    def update_create_recipe(self, validated_data, instance=None):
+        tag_list = validated_data.pop('tags', None)
+        ingredient_list = validated_data.pop('ingredients', None)
+        if not instance:
+            instance = super().create(validated_data)
+        else:
+            super().update(instance, validated_data)
+            instance.ingredients.clear()
+            instance.tags.clear()
 
-    @transaction.atomic
+        RecipeIngredient.objects.bulk_create(
+            [
+                RecipeIngredient(
+                    recipe=instance,
+                    ingredient=ingredient_item['id'],
+                    amount=ingredient_item['amount'],
+                )
+                for ingredient_item in ingredient_list
+            ],
+        )
+        instance.tags.set(tag_list)
+        return instance
+
     def create(self, validated_data):
         """
         Переопределение метода записи рецепта
         """
-        ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
-        recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.add(*tags)
-        self.add_ingredients(ingredients, recipe)
-        for ingredient in ingredients:
-            RecipeIngredient.objects.create(
-                ingredient=ingredient.get('id'),
-                recipe=recipe,
-                amount=ingredient.get('amount'))
-        return recipe
+        return self.update_create_recipe(validated_data)
 
-    @transaction.atomic
     def update(self, instance, validated_data):
         """Переопределение метода обновления записи рецепта."""
-        ingredients = validated_data.pop('ingredients')
-        tags = validated_data.pop('tags')
-        instance.tags.clear()
-        instance.ingredients.add(*tags)
-        RecipeIngredient.objects.filter(recipe=instance).delete()
-        for field, value in validated_data.items():
-            setattr(instance, field, value)
-        for ingredient in ingredients:
-            RecipeIngredient.objects.create(
-                ingredient=ingredient.get('id'),
-                recipe=instance,
-                amount=ingredient.get('amount'))
-        instance.save()
-        return instance
+        return self.update_create_recipe(validated_data, instance=instance)
 
     def to_representation(self, instance):
         """
         Переопределение перечня полей, возвращаемых эндпоинтом при успешном
         завершении операции добавления/обновления данных рецепта.
         """
-        request = self.context.get("request")
-        context = {"request": request}
-        return RecipeSerializer(instance, context=context).data
+        return RecipeSerializer(
+            instance,
+            context={'request': self.context.get('request')},
+        ).data
 
 
 class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
