@@ -14,7 +14,6 @@ class Tag(models.Model):
         verbose_name='Тег',
         help_text='Введите название тега', )
     color = models.CharField(
-        unique=True,
         max_length=settings.HEX_CODE_MAX_LENGTH,
         verbose_name='Цветовой HEX-код',
         help_text='Введите Цветовой HEX-код (например: #00b8ff)', )
@@ -101,7 +100,6 @@ class Recipe(models.Model):
     name = models.CharField(
         max_length=settings.HEX_CODE_MAX_LENGTH,
         verbose_name='Название блюда',
-        db_index=True,
         help_text='Введите название блюда',
     )
     text = models.TextField(help_text='Введите текст рецепта',

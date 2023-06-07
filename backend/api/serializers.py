@@ -130,7 +130,7 @@ class FollowSerializer(serializers.ModelSerializer):
                 {'error': 'Нельзя подписываться на самого себя'}, code=400)
         if Follow.objects.filter(user=user, author=author).exists():
             raise serializers.ValidationError(
-                {'error': 'Вы уже подписаны на данного автоора'}, code=400)
+                {'error': 'Вы уже подписаны на данного автора'}, code=400)
         return attrs
 
 
@@ -139,14 +139,10 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
     Определение логики сериализации для чтения (отображения) объектов модели
     ингредиентов в рецепте.
     """
-    id = serializers.ReadOnlyField(read_only=True, source='ingredient.id')
-    name = serializers.ReadOnlyField(source='ingredient.name',
-                                     slug_field="name",
-                                     read_only=True)
+    id = serializers.ReadOnlyField(source='ingredient.id')
+    name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
-        source="ingredient.measurement_unit",
-        slug_field="measurement_unit",
-        read_only=True)
+        source="ingredient.measurement_unit")
 
     class Meta:
         model = RecipeIngredient
@@ -218,7 +214,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
         queryset=Tag.objects.all(), many=True
     )
     ingredients = IngredientAmountSerializer(many=True)
-    image = Base64ImageField(max_length=None)
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
