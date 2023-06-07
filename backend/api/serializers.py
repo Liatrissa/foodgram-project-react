@@ -4,8 +4,7 @@ from django.db import IntegrityError
 from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers, status
-from rest_framework.relations import PrimaryKeyRelatedField
+from rest_framework import exceptions, relations, serializers, status
 
 from recipes.models import (
     FavoriteRecipeUser,
@@ -209,7 +208,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
     объектов этих моделей.
     """
     author = CustomUserSerializer(read_only=True)
-    tags = PrimaryKeyRelatedField(
+    tags = relations.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
     ingredients = IngredientAmountSerializer(many=True)
@@ -228,27 +227,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
             "cooking_time",
         )
         read_only_fields = ("author",)
-
-    @staticmethod
-    def validate_ingredients(ingredients):
-        """Метод проверки уникальности и количества
-         ингредиентов в рецепте."""
-        if not ingredients:
-            raise serializers.ValidationError(
-                'Необходимо выбрать ингредиенты!'
-            )
-        for ingredient in ingredients:
-            if ingredient['amount'] < 1:
-                raise serializers.ValidationError(
-                    'Количество не может быть меньше 1!'
-                )
-
-        ids = [ingredient['id'] for ingredient in ingredients]
-        if len(ids) != len(set(ids)):
-            raise serializers.ValidationError(
-                'Данный ингредиент уже есть в рецепте!'
-            )
-        return ingredients
 
     @atomic
     def add_ingredients(self, ingredients, recipe):
@@ -290,6 +268,30 @@ class RecipePostSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         self.add_ingredients(recipe=instance, ingredients=ingredients)
         return super().update(instance, validated_data)
+
+    def validate_ingredients(self, data):
+        """Метод проверки уникальности и количества ингредиентов в рецепте."""
+        ingredients = self.initial_data.get("ingredients")
+        if len(ingredients) <= 0:
+            raise exceptions.ValidationError(
+                {"ingredients": "Невозможно добавить рецепт без ингредиентов!"}
+            )
+        ingredients_list = []
+        for item in ingredients:
+            if item["id"] in ingredients_list:
+                raise exceptions.ValidationError(
+                    {"ingredients": "Ингредиенты не могут повторяться!"}
+                )
+            ingredients_list.append(item["id"])
+            if int(item["amount"]) <= 0:
+                raise exceptions.ValidationError(
+                    {
+                        "amount": (
+                            "Количество ингредиентов не" " может быть меньше 0"
+                        )
+                    }
+                )
+        return data
 
     def to_representation(self, instance):
         """
