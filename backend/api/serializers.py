@@ -167,7 +167,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     Определение логики сериализации для чтения (отображения) объектов модели
     рецептов.
     """
-    author = UserSerializer(read_only=True)
+    author = CustomUserSerializer(read_only=True)
     image = Base64ImageField()
     ingredients = IngredientRecipeSerializer(
         read_only=True,
@@ -208,7 +208,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
     - Список тегов и ингредиентов устанавливается через идентификаторы ('id')
     объектов этих моделей.
     """
-    author = UserSerializer(read_only=True)
+    author = CustomUserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
     )
@@ -218,14 +218,14 @@ class RecipePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id',
-            'tags',
-            'author',
-            'ingredients',
-            'name',
-            'image',
-            'text',
-            'cooking_time'
+            "id",
+            "image",
+            "tags",
+            "author",
+            "ingredients",
+            "name",
+            "text",
+            "cooking_time",
         )
         read_only_fields = ("author",)
 
@@ -301,8 +301,8 @@ class RecipePostSerializer(serializers.ModelSerializer):
         """Переопределение метода обновления записи рецепта."""
         ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
-        instance.tags.set(tags)
         instance.tags.clear()
+        instance.tags.set(tags)
         instance.ingredients.clear()
         instance = super().update(instance, validated_data)
         self.add_ingredients(recipe=instance, ingredients=ingredients)

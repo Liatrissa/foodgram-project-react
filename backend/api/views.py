@@ -187,8 +187,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         запроса.
         """
         if self.request.method in ("POST", "PUT", "PATCH"):
-            return RecipeSerializer
-        return RecipePostSerializer
+            return RecipePostSerializer
+        return RecipeSerializer
 
     def get_permissions(self):
         """
