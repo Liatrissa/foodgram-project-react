@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import exceptions, relations, serializers, status
+from rest_framework import relations, serializers, status
 
 from recipes.models import (
     FavoriteRecipeUser,
@@ -268,30 +268,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         self.add_ingredients(recipe=instance, ingredients=ingredients)
         return super().update(instance, validated_data)
-
-    def validate_ingredients(self, data):
-        """Метод проверки уникальности и количества ингредиентов в рецепте."""
-        ingredients = self.initial_data.get("ingredients")
-        if len(ingredients) <= 0:
-            raise exceptions.ValidationError(
-                {"ingredients": "Невозможно добавить рецепт без ингредиентов!"}
-            )
-        ingredients_list = []
-        for item in ingredients:
-            if item["id"] in ingredients_list:
-                raise exceptions.ValidationError(
-                    {"ingredients": "Ингредиенты не могут повторяться!"}
-                )
-            ingredients_list.append(item["id"])
-            if int(item["amount"]) <= 0:
-                raise exceptions.ValidationError(
-                    {
-                        "amount": (
-                            "Количество ингредиентов не" " может быть меньше 0"
-                        )
-                    }
-                )
-        return data
 
     def to_representation(self, instance):
         """
