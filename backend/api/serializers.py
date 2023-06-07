@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers, status
+from rest_framework import exceptions, serializers, status
 from rest_framework.relations import PrimaryKeyRelatedField
 
 from recipes.models import (
@@ -290,6 +290,22 @@ class RecipePostSerializer(serializers.ModelSerializer):
         instance = super().update(instance, validated_data)
         self.add_ingredients(recipe=instance, ingredients=ingredients)
         return super().update(instance, validated_data)
+
+    def validate_tags(self, data):
+        """Метод проверки уникальности и наличия тегов в рецепте."""
+        tags = self.initial_data.get("tags", False)
+        if not tags:
+            raise exceptions.ValidationError(
+                {"tags": "Рецепт не может быть создан без тегов!"}
+            )
+        tags_list = []
+        for tag in tags:
+            if tag in tags_list:
+                raise exceptions.ValidationError(
+                    {"tags": "Нельзя использовать повторяющиеся теги!"}
+                )
+            tags_list.append(tag)
+        return data
 
     def to_representation(self, instance):
         """
