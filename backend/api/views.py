@@ -1,11 +1,11 @@
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import Exists, OuterRef, Sum, Value
+from django.db.models import BooleanField, Sum, Value
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
 from rest_framework.generics import get_object_or_404
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
@@ -46,17 +46,19 @@ class PermissionMixin:
     pagination_class = None
 
 
-class TagsViewSet(PermissionMixin, viewsets.ModelViewSet):
+class TagsViewSet(PermissionMixin, ListModelMixin,
+                  RetrieveModelMixin, viewsets.GenericViewSet):
     """Вьюсет для работы с тэгами"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
-class IngredientsViewSet(PermissionMixin, viewsets.ModelViewSet):
+class IngredientsViewSet(PermissionMixin, ListModelMixin,
+                         RetrieveModelMixin, viewsets.GenericViewSet):
     """Вьюсет для работы с ингредиентами"""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (DjangoFilterBackend, SearchFilter,)
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
 
 
@@ -157,47 +159,30 @@ class RecipeViewSet(viewsets.ModelViewSet):
     Вьюсет для работы с рецептами. В представлении используются
     два отдельных серилизатора для чтения и записи объектов модели.
     """
-    permission_classes = (AuthorOrReadOnly,)
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    queryset = Recipe.objects.all()
     pagination_class = RecipePagination
+    permission_classes = [AuthorOrReadOnly]
     filterset_class = RecipeFilter
+    filter_backends = (DjangoFilterBackend,)
 
     def get_queryset(self):
-        """
-        Добавление поля is_favorited для определения добавления рецепта
-        в избранное.
-        Добавление поля is_in_shopping_cart для определения добавления рецепта
-        в список покупок.
-        """
-        return Recipe.objects.annotate(
-            is_favorited=Exists(
-                self.request.user.favorites.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-            is_in_shopping_cart=Exists(
-                self.request.user.shopping_list.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-        )
+        if self.request.user.is_authenticated:
+            return Recipe.objects.add_user_annotations(self.request.user.id)
+        return Recipe.objects.add_user_annotations(
+            Value(None, output_field=BooleanField()))
 
     def get_serializer_class(self):
         """
         Изменение типа вызываемого сериализатора, в зависимости от метода
         запроса.
         """
-        if self.request.method in ("POST", "PUT", "PATCH"):
+        if self.action in ['create', 'partial_update']:
             return RecipePostSerializer
         return RecipeSerializer
 
-    def get_permissions(self):
-        """
-        Дополнительные условия на определение прав доступа для изначального
-        создания объекта модели и изменение уже созданных объектов.
-        """
-        if self.request.method == "POST":
-            return [IsAuthenticated()]
-        return super().get_permissions()
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
     @action(detail=True,
             permission_classes=(IsAuthenticated,),
@@ -220,7 +205,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                           pk)
 
     @action(detail=False,
-            permission_classes=(IsAuthenticated,),
+            permission_classes=[IsAuthenticated],
             methods=['get'])
     def download_shopping_cart(self, request):
         """Эндпоинт для загрузки списка покупок."""
