@@ -8,7 +8,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
@@ -47,15 +46,13 @@ class PermissionMixin:
     pagination_class = None
 
 
-class TagsViewSet(PermissionMixin, ListModelMixin,
-                  RetrieveModelMixin, viewsets.GenericViewSet):
+class TagsViewSet(PermissionMixin, viewsets.ModelViewSet):
     """Вьюсет для работы с тэгами"""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
-class IngredientsViewSet(PermissionMixin, ListModelMixin,
-                         RetrieveModelMixin, viewsets.GenericViewSet):
+class IngredientsViewSet(PermissionMixin, viewsets.ModelViewSet):
     """Вьюсет для работы с ингредиентами"""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer

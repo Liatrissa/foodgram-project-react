@@ -221,28 +221,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("author",)
 
-    def validate(self, attrs):
-        ingredients = attrs.get('ingredients', [])
-        ingredients_id = []
-        if Recipe.objects.filter(name=attrs.get('name')).exists():
-            raise serializers.ValidationError(
-                {'name': 'Название рецепта должно быть уникальным'}, code=400)
-        if not attrs.get('cooking_time') > 0:
-            raise serializers.ValidationError(
-                {"cooking_time": "cooking_time должно быть больше 0"})
-        for elem in ingredients:
-            current_id = elem.get('id')
-            amount = elem.get('amount')
-            if current_id not in ingredients_id:
-                ingredients_id.append(current_id)
-            else:
-                raise serializers.ValidationError(
-                    {"id": "ингредиент должен быть уникальным"})
-            if not amount > 0:
-                raise serializers.ValidationError(
-                    {"amount": "значение количества должно быть > 0"})
-        return attrs
-
     @transaction.atomic
     def create(self, validated_data):
         """
@@ -276,6 +254,28 @@ class RecipePostSerializer(serializers.ModelSerializer):
                 amount=ingredient.get('amount'))
         instance.save()
         return instance
+
+    def validate(self, attrs):
+        ingredients = attrs.get('ingredients', [])
+        ingredients_id = []
+        if Recipe.objects.filter(name=attrs.get('name')).exists():
+            raise serializers.ValidationError(
+                {'name': 'Название рецепта должно быть уникальным'}, code=400)
+        if not attrs.get('cooking_time') > 0:
+            raise serializers.ValidationError(
+                {"cooking_time": "cooking_time должно быть больше 0"})
+        for elem in ingredients:
+            current_id = elem.get('id')
+            amount = elem.get('amount')
+            if current_id not in ingredients_id:
+                ingredients_id.append(current_id)
+            else:
+                raise serializers.ValidationError(
+                    {"id": "ингредиент должен быть уникальным"})
+            if not amount > 0:
+                raise serializers.ValidationError(
+                    {"amount": "значение количества должно быть > 0"})
+        return attrs
 
     def to_representation(self, instance):
         """
