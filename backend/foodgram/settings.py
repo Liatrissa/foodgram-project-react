@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-nxa!1%g%4k9*y4_d)y7z7sgpmk0cnlv-u^ap0jtf(5=v7%6bv$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -60,11 +60,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'foodgram.urls'
-
+TEMPLATES_DIR = BASE_DIR / 'templates'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [TEMPLATES_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
