@@ -36,7 +36,7 @@ from .serializers import (
     ShoppingCartWriteSerializer,
     TagSerializer,
 )
-from .utils import ingredients_export
+from .utils import add_delete, ingredients_export
 
 
 class PermissionMixin:
@@ -182,59 +182,22 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True,
             permission_classes=(IsAuthenticated,),
             methods=['post', 'delete'])
-    def favorite(self, request, **kwargs):
+    def favorite(self, request, pk=None):
         """Эндпоинт для избранных рецептов."""
-        if request.method == 'POST':
-            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
-            context = {'request': request, 'recipe': recipe}
-            serializer = FavoritesWriteSerializer(data=request.data,
-                                                  context=context)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save(user=request.user, recipe=recipe)
-                return Response(data=serializer.data,
-                                status=status.HTTP_201_CREATED)
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
-            user = request.user
-            if not FavoriteRecipeUser.objects.filter(user=user,
-                                                     recipe=recipe).exists():
-                return Response(
-                    {'error': 'У вас не было этого рецепта в избранном'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            favorite_recipe = get_object_or_404(FavoriteRecipeUser, user=user,
-                                                recipe=recipe)
-            favorite_recipe.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        return add_delete(FavoritesWriteSerializer,
+                          FavoriteRecipeUser,
+                          request,
+                          pk)
 
     @action(detail=True,
             permission_classes=(IsAuthenticated,),
             methods=['post', 'delete'])
-    def shopping_cart(self, request, **kwargs):
+    def shopping_cart(self, request, pk=None):
         """Эндпоинт для добавления/ удаления рецепта для списка покупок."""
-        if request.method == 'POST':
-            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
-            context = {'request': request, 'recipe': recipe}
-            serializer = ShoppingCartWriteSerializer(data=request.data,
-                                                     context=context)
-            if serializer.is_valid(raise_exception=True):
-                serializer.save(user=request.user, recipe=recipe)
-                return Response(data=serializer.data,
-                                status=status.HTTP_201_CREATED)
-
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
-            user = request.user
-            if not ShoppingCartUser.objects.filter(user=user,
-                                                   recipe=recipe).exists():
-                return Response(
-                    {'error': 'У вас не было этого рецепта в списке покупок'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            shopping_card = get_object_or_404(ShoppingCartUser, user=user,
-                                              recipe=recipe)
-            shopping_card.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        return add_delete(ShoppingCartWriteSerializer,
+                          ShoppingCartUser,
+                          request,
+                          pk)
 
     @action(detail=False,
             permission_classes=[IsAuthenticated],

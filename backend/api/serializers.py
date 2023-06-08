@@ -286,10 +286,7 @@ class RecipeShortRepresentationSerializer(serializers.ModelSerializer):
     Определение логики сериализации для отображения сокращенного набора
     полей для объектов модели рецептов.
     """
-    id = serializers.ReadOnlyField(source='recipe.id')
-    name = serializers.ReadOnlyField(source='recipe.name')
-    image = serializers.ImageField(source='recipe.image', read_only=True)
-    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -302,8 +299,6 @@ class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
     """
 
     class Meta:
-        message = None
-        model = None
         abstract = True
         fields = ("user", "recipe")
 
@@ -323,7 +318,7 @@ class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
         ).data
 
 
-class FavoritesWriteSerializer(serializers.ModelSerializer):
+class FavoritesWriteSerializer(FavoritesAndShoppingSerializer):
     """
     Определение логики сериализации для добавления рецептов в список
     избранного.
@@ -333,7 +328,7 @@ class FavoritesWriteSerializer(serializers.ModelSerializer):
         message = "Рецепт уже добавлен в список избранного!"
 
 
-class ShoppingCartWriteSerializer(serializers.ModelSerializer):
+class ShoppingCartWriteSerializer(FavoritesAndShoppingSerializer):
     """
     Определение логики сериализации для добавления рецептов в корзину (список
     покупок).
