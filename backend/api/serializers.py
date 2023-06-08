@@ -258,9 +258,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         ingredients = attrs.get('ingredients', [])
         ingredients_id = []
-        if Recipe.objects.filter(name=attrs.get('name')).exists():
-            raise serializers.ValidationError(
-                {'name': 'Название рецепта должно быть уникальным'}, code=400)
         if not attrs.get('cooking_time') > 0:
             raise serializers.ValidationError(
                 {"cooking_time": "cooking_time должно быть больше 0"})
@@ -269,9 +266,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
             amount = elem.get('amount')
             if current_id not in ingredients_id:
                 ingredients_id.append(current_id)
-            else:
-                raise serializers.ValidationError(
-                    {"id": "ингредиент должен быть уникальным"})
             if not amount > 0:
                 raise serializers.ValidationError(
                     {"amount": "значение количества должно быть > 0"})
