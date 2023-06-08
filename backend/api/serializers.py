@@ -281,29 +281,39 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context=context).data
 
 
-class FavoritesWriteSerializer(serializers.ModelSerializer):
+class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
     """
-    Определение логики сериализации для добавления рецептов в список
-    избранного.
+    Сериализатор для добавления рецептов в список избранного и корзину.
     """
-
     id = serializers.ReadOnlyField(source='recipe.id')
     name = serializers.ReadOnlyField(source='recipe.name')
     image = serializers.ImageField(source='recipe.image', read_only=True)
     cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
 
     class Meta:
-        model = FavoriteRecipeUser
+        message = None
+        model = None
+        abstract = True
         fields = ('id', 'name', 'cooking_time', 'image')
 
     def validate(self, attrs):
-        user = self.context.get('request').user
-        recipe = self.context.get('recipe')
-        if FavoriteRecipeUser.objects.filter(user=user,
-                                             recipe=recipe).exists():
-            raise serializers.ValidationError(
-                {'error': 'рецепт уже в избранном'}, code=400)
+        user = attrs["user"]
+        recipe = attrs["recipe"]
+
+        if self.Meta.model.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError({"errors": [self.Meta.message]})
+
         return attrs
+
+
+class FavoritesWriteSerializer(serializers.ModelSerializer):
+    """
+    Определение логики сериализации для добавления рецептов в список
+    избранного.
+    """
+    class Meta(FavoritesAndShoppingSerializer.Meta):
+        model = FavoriteRecipeUser
+        message = "Рецепт уже добавлен в список избранного!"
 
 
 class ShoppingCartWriteSerializer(serializers.ModelSerializer):
@@ -311,23 +321,9 @@ class ShoppingCartWriteSerializer(serializers.ModelSerializer):
     Определение логики сериализации для добавления рецептов в корзину (список
     покупок).
     """
-
-    id = serializers.ReadOnlyField(source='recipe.id')
-    name = serializers.ReadOnlyField(source='recipe.name')
-    image = serializers.ImageField(source='recipe.image', read_only=True)
-    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
-
-    class Meta:
+    class Meta(FavoritesAndShoppingSerializer.Meta):
         model = ShoppingCartUser
-        fields = ('id', 'name', 'cooking_time', 'image')
-
-    def validate(self, attrs):
-        user = self.context.get('request').user
-        recipe = self.context.get('recipe')
-        if ShoppingCartUser.objects.filter(user=user, recipe=recipe).exists():
-            raise serializers.ValidationError(
-                {'error': 'рецепт уже в списке покупок'}, code=400)
-        return attrs
+        message = "Рецепт уже добавлен в список покупок!"
 
 
 class SetPasswordSerializer(serializers.Serializer):
