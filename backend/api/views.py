@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import BooleanField, Value
+from django.db.models import Value
+from django.db.models.fields import BooleanField
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
-from rest_framework import permissions, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import (
     IsAuthenticated,
@@ -72,7 +73,7 @@ class CustomUserViewSet(UserViewSet):
 
     @action(
         detail=False, methods=(['get']),
-        permission_classes=[permissions.IsAuthenticated]
+        permission_classes=[IsAuthenticated]
     )
     def get_user_me(self, request):
         """Метод обрабатывающий эндпоинт me."""
