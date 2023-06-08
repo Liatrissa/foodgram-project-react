@@ -222,6 +222,15 @@ class RecipePostSerializer(serializers.ModelSerializer):
         read_only_fields = ("author",)
 
     @atomic
+    def add_ingredients(self, ingredients, recipe):
+        """Запись ингредиентов и их количества в рецепт."""
+        for ingredient in ingredients:
+            RecipeIngredient.objects.create(
+                ingredient=ingredient.get('id'),
+                amount=ingredient.get('amount'),
+                recipe=recipe, )
+
+    @atomic
     def create(self, validated_data):
         """
         Переопределение метода записи рецепта
@@ -230,11 +239,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.add(*tags)
-        for ingredient in ingredients:
-            RecipeIngredient.objects.create(
-                ingredient=ingredient.get('id'),
-                recipe=recipe,
-                amount=ingredient.get('amount'))
+        self.add_ingredients(ingredients, recipe)
         return recipe
 
     @atomic
@@ -247,13 +252,8 @@ class RecipePostSerializer(serializers.ModelSerializer):
         RecipeIngredient.objects.filter(recipe=instance).delete()
         for field, value in validated_data.items():
             setattr(instance, field, value)
-        for ingredient in ingredients:
-            RecipeIngredient.objects.create(
-                ingredient=ingredient.get('id'),
-                recipe=instance,
-                amount=ingredient.get('amount'))
-        instance.save()
-        return instance
+        self.add_ingredients(recipe=instance, ingredients=ingredients)
+        return super().update(instance, validated_data)
 
     def validate(self, attrs):
         ingredients = attrs.get('ingredients', [])

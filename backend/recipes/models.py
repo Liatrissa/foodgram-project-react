@@ -133,6 +133,7 @@ class Recipe(models.Model):
         verbose_name='Дата публикации рецепта',
         help_text="Введите дату публикации поста",
     )
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Рецепт'

@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import Exists, OuterRef, Value
+from django.db.models import Value
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.fields import BooleanField
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
@@ -161,24 +162,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
 
     def get_queryset(self):
-        """
-        Добавление поля is_favorited для определения добавления рецепта
-        в избранное.
-        Добавление поля is_in_shopping_cart для определения добавления рецепта
-        в список покупок.
-        """
-        return Recipe.objects.annotate(
-            is_favorited=Exists(
-                self.request.user.favorites.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-            is_in_shopping_cart=Exists(
-                self.request.user.shopping_list.filter(recipe=OuterRef("pk"))
-            )
-            if self.request.user.is_authenticated
-            else Value(False),
-        )
+        if self.request.user.is_authenticated:
+            return Recipe.objects.add_user_annotations(self.request.user.id)
+        return Recipe.objects.add_user_annotations(
+            Value(None, output_field=BooleanField()))
 
     def get_serializer_class(self):
         """
