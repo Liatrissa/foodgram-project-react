@@ -157,7 +157,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     два отдельных серилизатора для чтения и записи объектов модели.
     """
     http_method_names = ['get', 'post', 'patch', 'delete']
-    permission_classes = [AuthorOrReadOnly]
+    permission_classes = (AuthorOrReadOnly, )
     filterset_class = RecipeFilter
     filter_backends = (DjangoFilterBackend,)
 
