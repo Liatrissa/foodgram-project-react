@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
-from django.db import transaction
+from django.db.transaction import atomic
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import relations, serializers
@@ -221,7 +221,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("author",)
 
-    @transaction.atomic
+    @atomic
     def create(self, validated_data):
         """
         Переопределение метода записи рецепта
@@ -237,7 +237,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
                 amount=ingredient.get('amount'))
         return recipe
 
-    @transaction.atomic
+    @atomic
     def update(self, instance, validated_data):
         """Переопределение метода обновления записи рецепта."""
         ingredients = validated_data.pop('ingredients')
