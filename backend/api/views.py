@@ -1,5 +1,7 @@
+from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import BooleanField, Sum, Value
+from django.db.models import BooleanField, Value
+from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import permissions, status, viewsets
@@ -16,7 +18,6 @@ from recipes.models import (
     FavoriteRecipeUser,
     Ingredient,
     Recipe,
-    RecipeIngredient,
     ShoppingCartUser,
     Tag,
 )
@@ -36,7 +37,7 @@ from .serializers import (
     ShoppingCartWriteSerializer,
     TagSerializer,
 )
-from .utils import add_delete, ingredients_export
+from .utils import ingredients_export
 
 
 class PermissionMixin:
@@ -187,34 +188,68 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True,
             permission_classes=(IsAuthenticated,),
             methods=['post', 'delete'])
-    def favorite(self, request, pk=None):
+    def favorite(self, request, **kwargs):
         """Эндпоинт для избранных рецептов."""
-        return add_delete(FavoritesWriteSerializer,
-                          FavoriteRecipeUser,
-                          request,
-                          pk)
+        if request.method == 'POST':
+            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
+            context = {'request': request, 'recipe': recipe}
+            serializer = FavoritesWriteSerializer(data=request.data,
+                                                  context=context)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(user=request.user, recipe=recipe)
+                return Response(data=serializer.data,
+                                status=status.HTTP_201_CREATED)
+        if request.method == 'DELETE':
+            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
+            user = request.user
+            if not FavoriteRecipeUser.objects.filter(user=user,
+                                                     recipe=recipe).exists():
+                return Response(
+                    {'error': 'У вас не было этого рецепта в избранном'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            favorite_recipe = get_object_or_404(FavoriteRecipeUser, user=user,
+                                                recipe=recipe)
+            favorite_recipe.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True,
             permission_classes=(IsAuthenticated,),
             methods=['post', 'delete'])
-    def shopping_cart(self, request, pk=None):
+    def shopping_cart(self, request, **kwargs):
         """Эндпоинт для добавления/ удаления рецепта для списка покупок."""
-        return add_delete(ShoppingCartWriteSerializer,
-                          ShoppingCartUser,
-                          request,
-                          pk)
+        if request.method == 'POST':
+            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
+            context = {'request': request, 'recipe': recipe}
+            serializer = ShoppingCartWriteSerializer(data=request.data,
+                                                     context=context)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save(user=request.user, recipe=recipe)
+                return Response(data=serializer.data,
+                                status=status.HTTP_201_CREATED)
+
+        if request.method == 'DELETE':
+            recipe = get_object_or_404(Recipe, pk=kwargs.get('pk'))
+            user = request.user
+            if not ShoppingCartUser.objects.filter(user=user,
+                                                   recipe=recipe).exists():
+                return Response(
+                    {'error': 'У вас не было этого рецепта в списке покупок'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            shopping_card = get_object_or_404(ShoppingCartUser, user=user,
+                                              recipe=recipe)
+            shopping_card.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False,
             permission_classes=[IsAuthenticated],
             methods=['get'])
     def download_shopping_cart(self, request):
         """Эндпоинт для загрузки списка покупок."""
-        ingredients = (
-            RecipeIngredient.objects.filter(
-                recipe__shopping_list__user=self.request.user
-            )
-            .values("ingredient__name", "ingredient__measurement_unit")
-            .order_by("ingredient__name")
-            .annotate(amount=Sum("amount"))
-        )
-        return ingredients_export(self, request, ingredients)
+        product_list = ingredients_export(request.user)
+        response = HttpResponse(product_list,
+                                content_type='text/plain')
+        response['Content-Disposition'] = (
+            f'attachment; filename={settings.SHOPPING_CART}')
+        return response

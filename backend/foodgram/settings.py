@@ -171,6 +171,8 @@ HEX_CODE_MAX_LENGTH = 7
 
 PAGE_SIZE = 6
 
+SHOPPING_CART = 'shopping_cart.txt'
+
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'HIDE_USERS': False,

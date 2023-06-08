@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import relations, serializers, status
+from rest_framework import relations, serializers
 
 from recipes.models import (
     FavoriteRecipeUser,
@@ -69,20 +69,12 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 
 
 class RecipeInfoSerializer(serializers.ModelSerializer):
+    image = Base64ImageField()
+
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
         read_only_fields = ('id', 'name', 'image', 'cooking_time')
-
-    def validate(self, data):
-        user = self.context.get('request').user
-        if FavoriteRecipeUser.objects.filter(
-                recipe=self.instance, user=user).exists():
-            raise serializers.ValidationError(
-                detail='Рецепт уже в избранных',
-                code=status.HTTP_400_BAD_REQUEST,
-            )
-        return data
 
 
 class FollowSerializer(serializers.ModelSerializer):
@@ -295,65 +287,53 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context=context).data
 
 
-class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для добавления рецептов в список избранного и корзину.
-    """
-
-    class Meta:
-        message = None
-        model = None
-        abstract = True
-        fields = ("user", "recipe")
-
-    def validate(self, attrs):
-        user = attrs["user"]
-        recipe = attrs["recipe"]
-
-        if self.Meta.model.objects.filter(user=user, recipe=recipe).exists():
-            raise serializers.ValidationError({"errors": [self.Meta.message]})
-
-        return attrs
-
-    def to_representation(self, instance):
-        request = self.context.get("request")
-        return RecipeShortRepresentationSerializer(
-            instance.recipe, context={"request": request}
-        ).data
-
-
-class RecipeShortRepresentationSerializer(serializers.ModelSerializer):
-    """
-    Определение логики сериализации для отображения сокращенного набора
-    полей для объектов модели рецептов.
-    """
-    image = Base64ImageField()
-
-    class Meta:
-        model = Recipe
-        fields = ("id", "name", "image", "cooking_time")
-
-
-class FavoritesWriteSerializer(FavoritesAndShoppingSerializer):
+class FavoritesWriteSerializer(serializers.ModelSerializer):
     """
     Определение логики сериализации для добавления рецептов в список
     избранного.
     """
 
-    class Meta(FavoritesAndShoppingSerializer.Meta):
+    id = serializers.ReadOnlyField(source='recipe.id')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    image = serializers.ImageField(source='recipe.image', read_only=True)
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
+    class Meta:
         model = FavoriteRecipeUser
-        message = "Рецепт уже добавлен в список избранного!"
+        fields = ('id', 'name', 'cooking_time', 'image')
+
+    def validate(self, attrs):
+        user = self.context.get('request').user
+        recipe = self.context.get('recipe')
+        if FavoriteRecipeUser.objects.filter(user=user,
+                                             recipe=recipe).exists():
+            raise serializers.ValidationError(
+                {'error': 'рецепт уже в избранном'}, code=400)
+        return attrs
 
 
-class ShoppingCartWriteSerializer(FavoritesAndShoppingSerializer):
+class ShoppingCartWriteSerializer(serializers.ModelSerializer):
     """
     Определение логики сериализации для добавления рецептов в корзину (список
     покупок).
     """
 
-    class Meta(FavoritesAndShoppingSerializer.Meta):
+    id = serializers.ReadOnlyField(source='recipe.id')
+    name = serializers.ReadOnlyField(source='recipe.name')
+    image = serializers.ImageField(source='recipe.image', read_only=True)
+    cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
+
+    class Meta:
         model = ShoppingCartUser
-        message = "Рецепт уже добавлен в список покупок!"
+        fields = ('id', 'name', 'cooking_time', 'image')
+
+    def validate(self, attrs):
+        user = self.context.get('request').user
+        recipe = self.context.get('recipe')
+        if ShoppingCartUser.objects.filter(user=user, recipe=recipe).exists():
+            raise serializers.ValidationError(
+                {'error': 'рецепт уже в списке покупок'}, code=400)
+        return attrs
 
 
 class SetPasswordSerializer(serializers.Serializer):
