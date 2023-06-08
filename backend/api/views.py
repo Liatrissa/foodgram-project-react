@@ -24,7 +24,6 @@ from recipes.models import (
 from users.models import Follow, User
 
 from .filters import IngredientFilter, RecipeFilter
-from .pagination import RecipePagination
 from .permissions import AuthorOrReadOnly
 from .serializers import (
     CustomUserSerializer,
@@ -162,7 +161,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
     http_method_names = ['get', 'post', 'patch', 'delete']
     queryset = Recipe.objects.all()
-    pagination_class = RecipePagination
     permission_classes = [AuthorOrReadOnly]
     filterset_class = RecipeFilter
     filter_backends = (DjangoFilterBackend,)
