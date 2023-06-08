@@ -138,18 +138,17 @@ class CustomUserViewSet(UserViewSet):
                 serializer.save(user=request.user, author=user)
                 return Response(data=serializer.data,
                                 status=status.HTTP_201_CREATED)
-            if self.request.method == 'DELETE':
-                user = request.user
-                author = get_object_or_404(User, pk=kwargs.get('id'))
-                if not Follow.objects.filter(user=user,
-                                             author=author).exists():
-                    return Response(
-                        {'error': 'Вы не подписаны на данного пользователя'},
-                        status=status.HTTP_400_BAD_REQUEST)
-                follow = get_object_or_404(Follow, user=user, author=author)
-                follow.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if self.request.method == 'DELETE':
+            user = request.user
+            author = get_object_or_404(User, pk=kwargs.get('id'))
+            if not Follow.objects.filter(user=user, author=author).exists():
+                return Response(
+                    {'error': 'Вы не были подписаны на данного пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            follow = get_object_or_404(Follow, user=user, author=author)
+            follow.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):

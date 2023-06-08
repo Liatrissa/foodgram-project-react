@@ -281,9 +281,10 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return RecipeSerializer(instance, context=context).data
 
 
-class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
+class RecipeShortRepresentationSerializer(serializers.ModelSerializer):
     """
-    Сериализатор для добавления рецептов в список избранного и корзину.
+    Определение логики сериализации для отображения сокращенного набора
+    полей для объектов модели рецептов.
     """
     id = serializers.ReadOnlyField(source='recipe.id')
     name = serializers.ReadOnlyField(source='recipe.name')
@@ -291,10 +292,20 @@ class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
     cooking_time = serializers.ReadOnlyField(source='recipe.cooking_time')
 
     class Meta:
+        model = Recipe
+        fields = ("id", "name", "image", "cooking_time")
+
+
+class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для добавления рецептов в список избранного и корзину.
+    """
+
+    class Meta:
         message = None
         model = None
         abstract = True
-        fields = ('id', 'name', 'cooking_time', 'image')
+        fields = ("user", "recipe")
 
     def validate(self, attrs):
         user = attrs["user"]
@@ -304,6 +315,12 @@ class FavoritesAndShoppingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"errors": [self.Meta.message]})
 
         return attrs
+
+    def to_representation(self, instance):
+        request = self.context.get("request")
+        return RecipeShortRepresentationSerializer(
+            instance.recipe, context={"request": request}
+        ).data
 
 
 class FavoritesWriteSerializer(serializers.ModelSerializer):
