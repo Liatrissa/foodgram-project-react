@@ -70,7 +70,6 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             sudo docker compose stop
-            sudo docker ps -a -q
             sudo docker compose rm backend
             sudo docker rmi ${{ secrets.DOCKER_USERNAME }}/foodgram-backend
             touch .env
