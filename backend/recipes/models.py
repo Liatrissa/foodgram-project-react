@@ -35,9 +35,9 @@ class Tag(models.Model):
         ]
 
     def __str__(self) -> str:
-        return (f'Тэг: {self.name}'
-                f'цвет: {self.color}'
-                f'Slug: {self.slug}')
+        return (f' Тэг: {self.name}'
+                f' цвет: {self.color}'
+                f' Slug: {self.slug}')
 
 
 class Ingredient(models.Model):
