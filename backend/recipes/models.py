@@ -99,7 +99,7 @@ class RecipeQuerySet(models.QuerySet):
 class Recipe(models.Model):
     """Модель рецепта"""
     name = models.CharField(
-        max_length=settings.HEX_CODE_MAX_LENGTH,
+        max_length=settings.CONTENT_MAX_LENGTH,
         verbose_name='Название блюда',
         help_text='Введите название блюда',
     )
@@ -183,9 +183,6 @@ class RecipeIngredient(models.Model):
                 name='unique_ingredient_recipe'
             )
         ]
-
-    def __str__(self):
-        return f'Ингредиент {self.ingredient} в рецепте {self.recipe}'
 
 
 class TagRecipe(models.Model):
