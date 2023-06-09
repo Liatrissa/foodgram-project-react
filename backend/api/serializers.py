@@ -253,7 +253,8 @@ class RecipePostSerializer(serializers.ModelSerializer):
         for field, value in validated_data.items():
             setattr(instance, field, value)
         self.add_ingredients(recipe=instance, ingredients=ingredients)
-        return super().update(instance, validated_data)
+        instance.save()
+        return instance
 
     def validate(self, attrs):
         ingredients = attrs.get('ingredients', [])
