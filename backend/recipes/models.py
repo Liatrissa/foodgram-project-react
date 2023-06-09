@@ -61,9 +61,8 @@ class Ingredient(models.Model):
             )
         ]
 
-    def __str__(self):
-        return (f'Ингредиент: {self.name}',
-                f' Единица измерения:{self.measurement_unit}.')
+    def __str__(self) -> str:
+        return f'{self.name} {self.measurement_unit}'
 
 
 class RecipeQuerySet(models.QuerySet):
@@ -145,9 +144,8 @@ class Recipe(models.Model):
             )
         ]
 
-    def __str__(self):
-        return (f'Рецепт: {self.name}, Описание: {self.text[:100]},'
-                f'Время приготовления: {self.cooking_time} мин.')
+    def __str__(self) -> str:
+        return f'Рецепт: {self.name}'
 
 
 class RecipeIngredient(models.Model):

@@ -70,7 +70,6 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             sudo docker compose stop
-            sudo docker-compose down -v
             sudo docker compose rm backend
             sudo docker rmi ${{ secrets.DOCKER_USERNAME }}/foodgram-backend
             touch .env
@@ -82,4 +81,4 @@ jobs:
             echo DB_PORT=${{ secrets.DB_PORT }} >> .env
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-backend:latest
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-frontend:latest
-            sudo docker compose up -d --build
+            sudo docker compose up -d
