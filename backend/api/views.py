@@ -1,13 +1,13 @@
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.db.models import Value
+from django.db.models.fields import BooleanField
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.fields import BooleanField
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
