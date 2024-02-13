@@ -4,9 +4,9 @@ backports.zoneinfo==0.2.1
 certifi==2023.5.7
 cffi==1.15.1
 charset-normalizer==3.1.0
-cryptography==41.0.1
+cryptography==42.0.0
 defusedxml==0.7.1
-Django==4.2.1
+Django==4.2.10
 django-email-users==1.1.0
 django-extra-fields==3.0.2
 django-filter==23.2
